@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Nhiệm Vụ Hàng Ngày</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 80%;
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .task-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .task {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 5px;
+        }
+        .task.completed {
+            background-color: #e0f7e0;
+            text-decoration: line-through;
+        }
+        .task input[type="text"] {
+            border: none;
+            background-color: transparent;
+            font-size: 16px;
+            flex: 1;
+        }
+        .task input[type="text"]:focus {
+            outline: none;
+        }
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .button.delete {
+            background-color: #f44336;
+        }
+        .button.edit {
+            background-color: #ff9800;
+        }
+        .button:hover {
+            opacity: 0.8;
+        }
+        input[type="text"] {
+            width: 80%;
+            padding: 8px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .task-actions {
+            display: flex;
+            justify-content: space-between;
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Danh Sách Nhiệm Vụ Hàng Ngày</h1>
+    <input type="text" id="newTaskInput" placeholder="Nhập nhiệm vụ mới...">
+    <button class="button" onclick="addTask()">Thêm Nhiệm Vụ</button>
+
+    <ul class="task-list" id="taskList">
+        <!-- Các nhiệm vụ sẽ được thêm vào đây -->
+    </ul>
+</div>
+
+<!-- Thêm Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-database.js"></script>
+
+<script>
+// Firebase config - thay thế với thông tin từ Firebase của bạn
+const firebaseConfig = {
+    apiKey: "AIzaSyA-IJndm2xss5_g1D8S0t8F1i4yIs-yCv0Ud7qI",
+    authDomain: "server1-9baa4.firebaseapp.com",
+    databaseURL: "https://server1-9baa4-default-rtdb.firebaseio.com",
+    projectId: "server1-9baa4",
+    storageBucket: "server1-9baa4.appspot.com",
+    messagingSenderId: "1234567890",
+    appId: "1:1234567890:web:abcdef123456"
+};
+
+// Khởi tạo Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// Lấy phần tử DOM
+const taskListElement = document.getElementById("taskList");
+const newTaskInput = document.getElementById("newTaskInput");
+
+// Lắng nghe các thay đổi trong Firebase Realtime Database
+firebase.database().ref('tasks').on('value', (snapshot) => {
+    const tasks = snapshot.val();
+    renderTasks(tasks);
+});
+
+// Hiển thị danh sách nhiệm vụ
+function renderTasks(tasks) {
+    taskListElement.innerHTML = '';
+    for (const id in tasks) {
+        const task = tasks[id];
+        const taskElement = document.createElement("li");
+        taskElement.className = "task" + (task.completed ? " completed" : "");
+        taskElement.innerHTML = `
+            <input type="text" value="${task.text}" ${task.completed ? 'disabled' : ''} onblur="editTask('${id}', this.value)">
+            <div class="task-actions">
+                <button class="button" onclick="toggleCompletion('${id}')">${task.completed ? "Chưa Hoàn Thành" : "Đã Hoàn Thành"}</button>
+                <button class="button edit" onclick="editTask('${id}')">Sửa</button>
+                <button class="button delete" onclick="deleteTask('${id}')">Xóa</button>
+            </div>
+        `;
+        taskListElement.appendChild(taskElement);
+    }
+}
+
+// Thêm nhiệm vụ mới vào Firebase
+function addTask() {
+    const taskText = newTaskInput.value.trim();
+    if (taskText) {
+        const newTaskRef = firebase.database().ref('tasks').push();
+        newTaskRef.set({
+            text: taskText,
+            completed: false
+        });
+        newTaskInput.value = "";
+    }
+}
+
+// Đánh dấu hoàn thành hoặc chưa hoàn thành
+function toggleCompletion(taskId) {
+    const taskRef = firebase.database().ref('tasks/' + taskId);
+    taskRef.once('value', (snapshot) => {
+        const task = snapshot.val();
+        taskRef.update({
+            completed: !task.completed
+        });
+    });
+}
+
+// Chỉnh sửa nhiệm vụ
+function editTask(taskId, newText) {
+    if (newText === undefined) return;
+    const taskRef = firebase.database().ref('tasks/' + taskId);
+    taskRef.update({
+        text: newText
+    });
+}
+
+// Xóa nhiệm vụ
+function deleteTask(taskId) {
+    const taskRef = firebase.database().ref('tasks/' + taskId);
+    taskRef.remove();
+}
+</script>
+
+</body>
+</html>
